@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>WebGL2 Template</title>
+  </head>
+  <style>
+    canvas { border: 1px solid #ccc; }
+  </style>
+  <body>
+    <canvas width="600" height="400"></canvas>
+  </body>
+</html>
+<script src="resources/m4.js"></script>
+<script>
+
+"use strict"
+
+// Modify the Vertex Shader code below
+const vertexShaderSource = `#version 300 es
+
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 project;
+
+in vec4 p;
+in vec2 uv;
+out vec2 texCoord;
+
+void main()
+{
+    gl_Position = project * view * model * p;
+    texCoord = uv;
+}`;
+
+// Modify the Fragment Shader code below
+const fragmentShaderSource = `#version 300 es
+
+precision mediump float;
+
+uniform sampler2D texture1;
+in vec2 texCoord;
+
+out vec4 fragColor;
+
+void main()
+{
+    fragColor = texture(texture1, texCoord);
+}`;
+
+//
+// Initialize a texture and load an image.
+// When the image finished loading copy it into the texture.
+//
+function loadTexture(gl, url) {
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+
+  // Because images have to be downloaded over the internet
+  // they might take a moment until they are ready.
+  // Until then put a single pixel in the texture so we can
+  // use it immediately. When the image has finished downloading
+  // we'll update the texture with the contents of the image.
+  const level = 0;
+  const internalFormat = gl.RGBA;
+  const width = 1;
+  const height = 1;
+  const border = 0;
+  const srcFormat = gl.RGBA;
+  const srcType = gl.UNSIGNED_BYTE;
+  const pixel = new Uint8Array([0, 0, 255, 255]); // opaque blue
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    level,
+    internalFormat,
+    width,
+    height,
+    border,
+    srcFormat,
+    srcType,
+    pixel,
+  );
+
+  const image = new Image();
+  image.onload = () => {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      level,
+      internalFormat,
+      srcFormat,
+      srcType,
+      image,
+    );
+
+    // WebGL1 has different requirements for power of 2 images
+    // vs. non power of 2 images so check if the image is a
+    // power of 2 in both dimensions.
+    if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+      // Yes, it's a power of 2. Generate mips.
+      gl.generateMipmap(gl.TEXTURE_2D);
+    } else {
+      // No, it's not a power of 2. Turn off mips and set
+      // wrapping to clamp to edge
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    }
+  };
+  image.src = url;
+
+  return texture;
+}
+
+function isPowerOf2(value) {
+  return (value & (value - 1)) === 0;
+}
+
+
+// Code that goes into every WebGL program
+//{
+const canvas = document.querySelector('canvas');
+const gl = canvas.getContext('webgl2');
+const program = gl.createProgram();
+
+const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+gl.shaderSource(vertexShader, vertexShaderSource);
+gl.compileShader(vertexShader);
+gl.attachShader(program, vertexShader);
+
+const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+gl.shaderSource(fragmentShader, fragmentShaderSource);
+gl.compileShader(fragmentShader);
+gl.attachShader(program, fragmentShader);
+
+gl.linkProgram(program);
+
+// Error logging if shaders are not compiled
+if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    console.log(gl.getShaderInfoLog(vertexShader));
+    console.log(gl.getShaderInfoLog(fragmentShader));
+}
+
+gl.useProgram(program);
+//}
+
+const vertexData = new Float32Array([
+    // x, y, z,    u, v
+    -.5,-.5,-.5,   0.25, 0.33,
+    -.5, .5, .5,   0.0, 0.66,
+    -.5, .5,-.5,   0.25, 0.66,
+    -.5,-.5, .5,   0.0, 0.33,
+    -.5, .5, .5,   0.0, 0.66,
+    -.5,-.5,-.5,   0.25, 0.33,
+
+    .5 ,-.5,-.5,   0.75, 0.33,
+    .5 , .5,-.5,   0.75, 0.66,
+    .5 , .5, .5,   0.50, 0.66,
+    .5 , .5, .5,   0.50, 0.66,
+    .5 ,-.5, .5,   0.50, 0.33,
+    .5 ,-.5,-.5,   0.75, 0.33,
+
+    -.5,-.5,-.5,   0.25, 0.33,
+     .5,-.5,-.5,   0.50, 0.33,
+     .5,-.5, .5,   0.50, 0.0,
+     .5,-.5, .5,   0.50, 0.0,
+    -.5,-.5, .5,   0.25, 0.0,
+    -.5,-.5,-.5,   0.25, 0.33,
+
+    -.5, .5,-.5,   0.25, 1.0,
+     .5, .5, .5,   0.50, 0.66,
+     .5, .5,-.5,   0.25, 0.66,
+    -.5, .5, .5,   0.50, 1.0,
+     .5, .5, .5,   0.50, 0.66,
+    -.5, .5,-.5,   0.25, 1.0,
+
+     .5,-.5,-.5,   0.75, 0.33,
+    -.5,-.5,-.5,   1.0, 0.33,
+     .5, .5,-.5,   0.75, 0.66,
+    -.5, .5,-.5,   1.0, 0.66,
+     .5, .5,-.5,   0.75, 0.66,
+    -.5,-.5,-.5,   1.0, 0.33,
+
+    -.5,-.5, .5,   0.0, 0.33,
+     .5,-.5, .5,   0.25, 0.33,
+     .5, .5, .5,   0.25, 0.66,
+     .5, .5, .5,   0.25, 0.66,
+    -.5, .5, .5,   0.0, 0.66,
+    -.5,-.5, .5,   0.0, 0.33,
+]);
+
+// Your code for feeding data into the shaders goes here
+gl.enable(gl.DEPTH_TEST);
+
+// Compute the projection matrix
+var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+var project = m4.perspective(100.0*3.14/180.0, aspect, 0.1, 2000);
+
+// Compute the camera's matrix using look at.
+var lookFrom = [0.5, 1.5, -1.5];
+var lookAt = [0.0, 0, 0.0];
+var up = [0, 1, 0];
+var cameraMatrix = m4.lookAt(lookFrom, lookAt, up);
+var view = m4.inverse(cameraMatrix); // Make a view matrix from the camera matrix.
+
+var model = m4.identity();
+model = m4.yRotate(model, 0.5);
+
+const modelLoc = gl.getUniformLocation(program, 'model')
+gl.uniformMatrix4fv(modelLoc, false, model)
+
+const viewLoc = gl.getUniformLocation(program, 'view')
+gl.uniformMatrix4fv(viewLoc, false, view)
+
+const projectLoc = gl.getUniformLocation(program, 'project')
+gl.uniformMatrix4fv(projectLoc, false, project)
+
+const pLoc = gl.getAttribLocation(program, 'p');
+const uvLoc = gl.getAttribLocation(program, 'uv');
+
+const vertexBuffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+gl.bufferData(gl.ARRAY_BUFFER, vertexData, gl.STATIC_DRAW);
+gl.vertexAttribPointer(pLoc, 3, gl.FLOAT, false, 20, 0);
+gl.vertexAttribPointer(uvLoc, 2, gl.FLOAT, false, 20, 12);
+gl.enableVertexAttribArray(pLoc);
+gl.enableVertexAttribArray(uvLoc);
+
+
+const texture = loadTexture(gl, "resources/minecraft.jpeg");
+gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+
+// Your drawing code goes here
+//gl.drawArrays(gl.TRIANGLES, 0, 36);
+
+const draw = () => {
+    requestAnimationFrame(draw);
+
+    //model = m4.yRotate(model, 0.01);
+    //gl.uniformMatrix4fv(modelLoc, false, model);
+    //gl.drawArrays(gl.TRIANGLES, 0, 36);
+    //console.log(modelLoc)
+  for(var i = 0; i < 40; i++) {
+    for(var j = 0; j < 40; j++) {
+      model = m4.identity();
+      model = m4.yRotate(model, 0.5);
+      model = m4.translate(model, -i, 0, j);
+      gl.uniformMatrix4fv(modelLoc, false, model);
+      gl.drawArrays(gl.TRIANGLES, 0, 36);
+    }
+    model = m4.identity();
+    model = m4.yRotate(model, 0.5);
+  }
+
+  document.addEventListener('keydown', function(event) {
+    if (event.key === "ArrowUp") {
+      cameraMatrix = m4.translate(cameraMatrix, 0, 0.001, -0.001);
+      view = m4.inverse(cameraMatrix);
+      gl.uniformMatrix4fv(viewLoc, false, view)
+    }
+  });
+
+  document.addEventListener('keydown', function(event) {
+    if (event.key === "ArrowDown") {
+      cameraMatrix = m4.translate(cameraMatrix, 0, -0.001, 0.001);
+      view = m4.inverse(cameraMatrix);
+      gl.uniformMatrix4fv(viewLoc, false, view)
+    }
+  });
+
+
+};
+draw();
+
+
+</script>
+

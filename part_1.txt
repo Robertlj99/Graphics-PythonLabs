@@ -1,0 +1,11 @@
+(Lines 123-145)
+This section starts by grabbing the canvas element defined in lines 8-13 of the file. After getting the element a webgl2 rendering context is retrieved from it. The context keeps track of the state of the algorithm as calculations are done. The next line creates a program, the program is an executable to be used by the GPU. Program's require at the minimum a vertex and a fragment shader. Lines 128-130 handle the creation, importing, compilation, and finally the attachment of the required vertex shader to the program. Lines 133-135 likewise handle these same steps for the fragment shader. Line 137 then finishes this task by building the attached shaders into a final program ready to be used by the GPU. Lines 140-143 will log errors to the console if they occur. Lastly, line 145 finishes by telling webgl to use the newly built program to render draw calls.
+
+(210-217)
+Firstly, line 210 retrieves a pointer to a location in memory within the program for an attribute named 'model' (specifically this is the vertex location of our model). Next, line 211 will send the program the data for the model as defined in lines 207 and 208. The rest of the lines in this section repeat this process for the view and project attributes respectively. The vertex shader is expecting 4x4 uniform matrices for each of these sent values. Uniform data is defined globally for the program and cannot be altered within calls to draw.
+
+(222-228)
+This section starts by creating a webgl buffer. The buffer is used to interpret the data we are sending in correctly. The vertex data defined earlier in the code is then bound to this buffer. After binding the data the buffer is then sent to the pointer in shader memory to be read into the program. Finally, the last two lines enable the program to use the newly sent data.
+
+(What are they doing?)
+The vertex shader essentially handles the transoformations needed to move from world-space to clipping-space and ultimately determines where the pixels land on the screen. The fragment shader handles all the calculations needed to determine the pixels colors, and can include several advanced shading techniques.
